@@ -22,11 +22,23 @@
 
 ## 🎬 The situation
 
-<p align="center"><img src="assets/gifs/situation.gif" width="300" alt=""></p>
+<p align="center"><img src="assets/gifs/situation.gif" width="300" alt="Image layers stacking up: a rm in a later layer only hides the file, layer 2 still holds the secret"></p>
 
-An old Pollie image, `legacy-pollie:1`, was built by the previous team and still sits in a registry that half the company can pull from. Two things have just landed on your desk. **Security** says a registry token was copied into that image at build time. **Ops** says it is 1.9 GB and takes four minutes to pull. The previous team's answer to the first was: "we deleted it, look, there is a `RUN rm` in the Dockerfile".
+Your company is being acquired. The buyer's security engineer, who has been reading your repositories all week, opened one pull request and assigned **you** to review it, because you are the one who knows Docker.
 
-You will find out whether they are right, using nothing but `docker` and `tar`, because the point of this lab is to understand what an image **physically is**. Then you will rebuild it so the problem cannot come back.
+```text
+Pull request #212                                         status: changes requested
+Title      : Keep legacy-pollie:1 in the production registry "as is"
+Author     : previous platform team (now at another company)
+Reviewers  : you (assigned), the buyer's security engineer
+
+  author  > The image is fine. The registry token was removed in the Dockerfile:
+            "RUN python -c ... && rm /app/.env"  see line 8. Can we merge?
+  security> It is 1.9 GB and takes four minutes to pull. And I want proof about
+            the token before this goes anywhere near the deal. Evidence only.
+```
+
+The previous team says the secret is gone. The buyer says prove it. You will find out, using nothing but `docker` and `tar`, because the point of this lab is to understand what an image **physically is**. Then you will replace the Dockerfile with one that cannot have this problem.
 
 > [!IMPORTANT]
 > **Your mission**
@@ -40,13 +52,15 @@ You will find out whether they are right, using nothing but `docker` and `tar`, 
 
 <p align="center"><img src="assets/divider.svg" alt="" width="100%"></p>
 
-## Part 0 - Set the scene
+## Round 0 - Check out the pull request
 
-Fork this repository, clone your fork and run `./setup.sh`. It clones Pollie, **plants a random token** in `secrets/registry.env` and builds the legacy image from `Dockerfile.legacy`. Read `Dockerfile.legacy` first, as the previous team wrote it. The token is different on every machine, so nobody can copy an answer.
+Fork this repository, clone your fork and run `./setup.sh`. It clones Pollie, **plants a random token** in `secrets/registry.env` and builds the legacy image from `Dockerfile.legacy`. Read `Dockerfile.legacy` first, as the previous team wrote it, and review it line by line before you run anything else: which lines worry you, and why? The token is different on every machine, so nobody can copy an answer.
 
 <p align="center"><img src="assets/divider.svg" alt="" width="100%"></p>
 
-## Part 1 - History
+## Round 1 - Read the history
+
+<p align="center"><img src="assets/gifs/recon.gif" width="300" alt="A highlighted row moving down a file tree, the way docker save and tar -x expose the layers"></p>
 
 ```bash
 docker images legacy-pollie:1
@@ -57,11 +71,11 @@ docker history --no-trunc legacy-pollie:1
 Each row is one instruction and the **layer** it produced, with its size. Find the layer that copied `registry.env`, the one that "deleted" it, and the largest one.
 
 > [!NOTE]
-> **Predict** Layers are stacked, read-only filesystem changes. When a later layer runs `rm /app/.env`, what does it add to the stack: a deletion marker on top of the old file, or does it edit the layer below? What does that mean for the bytes in the layer below?
+> **Predict** Layers are stacked, read-only filesystem changes. When a later layer runs `rm /app/.env`, what does it add to the stack: a deletion marker on top of the old file, or does it edit the layer below? What does that mean for the bytes in the layer below? Write your answer as a review comment on line 8 before you go on.
 
 <p align="center"><img src="assets/divider.svg" alt="" width="100%"></p>
 
-## Part 2 - Unpack it
+## Round 2 - Unpack it (the evidence)
 
 An image is a set of tar files plus JSON. Take it apart:
 
@@ -85,15 +99,15 @@ Extract the layer that contains it and read the file. That is the secret, still 
 
 <p align="center"><img src="assets/divider.svg" alt="" width="100%"></p>
 
-## Part 3 - Findings
+## Round 3 - Write up the findings
 
-Fill in `findings.json` (every field is a fact you can read from `docker history`, `docker image inspect` or the layers): the base image, the token, the instruction that created the layer with the secret, the instruction that created the largest layer, the number of layers, the user the container runs as, and the image size in MB (take the number `docker images` shows).
+Fill in `findings.json` (every field is a fact you can read from `docker history`, `docker image inspect` or the layers): the base image, the token, the instruction that created the layer with the secret, the instruction that created the largest layer, the number of layers, the user the container runs as, and the image size in MB (take the number `docker images` shows). The security engineer will read this file before the meeting.
 
 <p align="center"><img src="assets/divider.svg" alt="" width="100%"></p>
 
-## Part 4 - Build it properly
+## Round 4 - Propose the replacement
 
-Write `Dockerfile.fixed` (see its comments) and `.dockerignore`. Rules:
+Request changes with a better Dockerfile. Write `Dockerfile.fixed` (see its comments) and `.dockerignore`. Rules:
 
 - `python:3.12-slim`, **multi-stage**: dependencies installed in a build stage, only the result copied into the final one;
 - only `requirements.txt` (the runtime), no pip cache, no tests or docs, no compiler in the final image;
@@ -110,9 +124,9 @@ docker images | grep pollie
 
 <p align="center"><img src="assets/divider.svg" alt="" width="100%"></p>
 
-## Part 5 - Prove it
+## Round 5 - Prove it (the merge gate)
 
-<p align="center"><img src="assets/gifs/verify.gif" width="300" alt=""></p>
+<p align="center"><img src="assets/gifs/verify.gif" width="300" alt="A terminal running verify.sh and printing PASS lines"></p>
 
 ```bash
 ./verify.sh
@@ -134,7 +148,7 @@ It checks your findings against the real image, builds your Dockerfile, scans **
 <!-- teardown:start (generated by labs.py, do not edit) -->
 ## Tear down (mandatory)
 
-<p align="center"><img src="assets/gifs/teardown.gif" width="300" alt=""></p>
+<p align="center"><img src="assets/gifs/teardown.gif" width="300" alt="A terminal running verify-teardown.sh and printing TEARDOWN VERIFIED"></p>
 
 Resources left behind cost money, keep doors open and pollute the next lab. Removing what you created is part of the job, so it is part of the submission: **you must prove it is gone**.
 
