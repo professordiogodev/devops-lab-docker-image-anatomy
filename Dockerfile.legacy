@@ -1,0 +1,11 @@
+# PROVIDED: the previous team's image. Read it like a crime scene.
+FROM python:3.12
+WORKDIR /app
+RUN apt-get update && apt-get install -y build-essential git curl vim
+COPY pollie/ /app/
+COPY secrets/registry.env /app/.env
+RUN pip install -r requirements.txt && pip install -r requirements-dev.txt
+RUN python -c "print('registry login ok')" && rm /app/.env
+ENV POLLIE_ENV=production
+EXPOSE 8000
+CMD ["uvicorn", "pollie.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

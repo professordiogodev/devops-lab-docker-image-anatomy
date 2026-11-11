@@ -1,0 +1,1 @@
+# TODO: keep the build context small and secrets out of it (git, tests, docs, caches, .env files, the secrets/ folder).

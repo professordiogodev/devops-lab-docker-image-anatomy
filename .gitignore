@@ -1,0 +1,6 @@
+.DS_Store
+__pycache__/
+pollie/
+secrets/
+.lab/.truth.json
+work/

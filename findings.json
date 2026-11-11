@@ -1,0 +1,9 @@
+{
+  "base_image": "TODO: the image the legacy image is built FROM",
+  "secret_value": "TODO: the value of REGISTRY_TOKEN that is still inside the image",
+  "secret_layer_instruction": "TODO: the Dockerfile instruction that created the layer holding the secret (a few words are enough)",
+  "largest_layer_instruction": "TODO: the Dockerfile instruction that created the largest layer",
+  "layer_count": 0,
+  "runs_as": "TODO: the user the container runs as",
+  "image_size_mb": 0
+}

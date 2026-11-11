@@ -1,0 +1,9 @@
+# TODO: a production image for Pollie's API (same code, same command), built from the SAME source in ./pollie.
+#   - based on python:3.12-slim, no build tools in the final image
+#   - dependencies installed from requirements.txt ONLY (no test or dev tools), without the pip cache
+#   - copies the application package only: no tests, no docs
+#   - no secret anywhere in any layer (the old image copied secrets/registry.env: you do not need it to run Pollie)
+#   - runs as a non-root user (numeric UID 10001)
+#   - EXPOSE 8000 and the same CMD as the legacy image
+#   - a HEALTHCHECK that does not need curl (python -c ... urllib ... /healthz)
+# Target: under 250 MB.
